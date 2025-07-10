@@ -19,6 +19,9 @@ const eventModel = new Event(db);
 
 app.use(cors());
 app.use(bodyParser.json());
+app.get('/', (req, res) => {
+  res.send('API server is running');
+});
 app.use('/api/events', eventRoutes);
 app.post('/api/events', async (req, res) => {
   try {
