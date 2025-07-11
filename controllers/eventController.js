@@ -44,4 +44,15 @@ const getAllEvents = async (req, res) => {
   }
 };
 
-module.exports = { createEvent, getAllEvents };
+const deleteEvent = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await eventModel.delete(id);
+    res.json({ message: 'Event deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting event:', error);
+    res.status(500).json({ message: 'Failed to delete event' });
+  }
+};
+
+module.exports = { createEvent, getAllEvents, deleteEvent };

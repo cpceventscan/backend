@@ -44,6 +44,11 @@ class Event {
     const query = `UPDATE events SET qr_code_image = ? WHERE id = ?`;
     await this.db.query(query, [qrPath, eventId]);
   }
+  async delete(eventId) {
+    const query = 'DELETE FROM events WHERE id = ?';
+    const [result] = await this.db.query(query, [eventId]);
+    return result;
+  }
 }
 
 module.exports = Event;
