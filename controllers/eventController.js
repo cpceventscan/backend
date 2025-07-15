@@ -5,7 +5,22 @@ const Event = require('../models/event');
 const db = require('../config/db');
 
 const eventModel = new Event(db);
+const saveBase64File = (base64String, uploadFolder, fileName) => {
+  const matches = base64String.match(/^data:(.+);base64,(.+)$/);
+  if (!matches) throw new Error('Invalid base64 string');
 
+  const ext = matches[1].split('/')[1];
+  const data = matches[2];
+  const buffer = Buffer.from(data, 'base64');
+
+  if (!fs.existsSync(uploadFolder)) {
+    fs.mkdirSync(uploadFolder, { recursive: true });
+  }
+
+  const filePath = path.join(uploadFolder, `${fileName}.${ext}`);
+  fs.writeFileSync(filePath, buffer);
+  return filePath;
+};
 const createEvent = async (req, res) => {
   try {
     const eventData = req.body;
@@ -54,5 +69,39 @@ const deleteEvent = async (req, res) => {
     res.status(500).json({ message: 'Failed to delete event' });
   }
 };
+const updateEvent = async (req, res) => {
+  try {
+    const eventId = req.params.id;
+    const eventData = req.body;
 
-module.exports = { createEvent, getAllEvents, deleteEvent };
+    // Handle base64 event program file upload if sent
+    if (eventData.event_program_attachment_base64) {
+      const uploadDir = path.join(__dirname, '../uploads/events');
+      const savedFilePath = saveBase64File(eventData.event_program_attachment_base64, uploadDir, `event-program-${eventId}`);
+      // Store relative path for frontend usage
+      eventData.event_program_attachment = savedFilePath.replace(path.join(__dirname, '../'), '/');
+    }
+
+    await eventModel.update(eventId, eventData);
+
+    // Regenerate QR code if option is automatic
+    if (eventData.qr_code_option === 'automatic') {
+      const qrFolderPath = path.join(__dirname, '../uploads/qr');
+      if (!fs.existsSync(qrFolderPath)) {
+        fs.mkdirSync(qrFolderPath, { recursive: true });
+      }
+      const qrImagePath = path.join(qrFolderPath, `event-${eventId}.png`);
+      await QRCode.toFile(qrImagePath, `${eventId}`);
+
+      const qrCodeImagePath = `/uploads/qr/event-${eventId}.png`;
+      await eventModel.updateQRCodePath(eventId, qrCodeImagePath);
+    }
+
+    res.json({ message: 'Event updated successfully' });
+  } catch (error) {
+    console.error('Error updating event:', error);
+    res.status(500).json({ message: 'Failed to update event', error: error.message });
+  }
+};
+
+module.exports = { createEvent, getAllEvents, deleteEvent, updateEvent };
