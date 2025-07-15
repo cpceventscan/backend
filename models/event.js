@@ -82,7 +82,7 @@ class Event {
       eventData.end_date_time,
       eventData.selection_mode,
       eventData.selected_course,
-      eventData.selected_students ? JSON.stringify(eventData.selected_students) : null,
+      eventData.selected_students || null, // <--- FIXED
       eventData.event_program_attachment,
       eventData.event_note,
       eventData.event_reminder,
@@ -97,8 +97,14 @@ class Event {
     ];
 
     const [result] = await this.db.query(query, values);
+
+    if (result.affectedRows === 0) {
+      throw new Error(`No event updated. Event ID ${eventId} may not exist.`);
+    }
+
     return result;
   }
+
 
 }
 
