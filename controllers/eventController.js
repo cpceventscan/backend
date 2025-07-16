@@ -74,39 +74,48 @@ const updateEvent = async (req, res) => {
     const eventId = req.params.id;
     const eventData = req.body;
 
-    // Handle base64 event program file upload if sent
+    // Save event program base64 file if present
     if (eventData.event_program_attachment_base64) {
       const uploadDir = path.join(__dirname, '../uploads/events');
-      const savedFilePath = saveBase64File(eventData.event_program_attachment_base64, uploadDir, `event-program-${eventId}`);
-      // Store relative path for frontend usage
-      eventData.event_program_attachment = savedFilePath.replace(path.join(__dirname, '../'), '/');
+      const savedFilePath = saveBase64File(
+        eventData.event_program_attachment_base64,
+        uploadDir,
+        `event-program-${eventId}`
+      );
+      eventData.event_program_attachment = savedFilePath.replace(
+        path.join(__dirname, '../'),
+        '/'
+      );
     }
 
+    // Update main event data
     await eventModel.update(eventId, eventData);
 
-    // Regenerate QR code if option is automatic
+    const qrFolderPath = path.join(__dirname, '../uploads/qr');
+    const qrImagePath = path.join(qrFolderPath, `event-${eventId}.png`);
+    const qrCodeImagePath = `/uploads/qr/event-${eventId}.png`;
+
     if (eventData.qr_code_option === 'automatic') {
-      try {
-        const qrFolderPath = path.join(__dirname, '../uploads/qr');
-
-        if (!fs.existsSync(qrFolderPath)) {
-          console.log('QR folder does not exist. Creating...');
-          fs.mkdirSync(qrFolderPath, { recursive: true });
-        }
-
-        const qrImagePath = path.join(qrFolderPath, `event-${eventId}.png`);
-        console.log('Generating QR code at:', qrImagePath);
-
-        await QRCode.toFile(qrImagePath, `${eventId}`);
-        console.log('QR code generated successfully.');
-
-        const qrCodeImagePath = `/uploads/qr/event-${eventId}.png`;
-        await eventModel.updateQRCodePath(eventId, qrCodeImagePath);
-        console.log('QR code path updated in DB:', qrCodeImagePath);
-
-      } catch (qrErr) {
-        console.error('Error generating QR code during update:', qrErr);
+      // Ensure QR folder exists
+      if (!fs.existsSync(qrFolderPath)) {
+        fs.mkdirSync(qrFolderPath, { recursive: true });
       }
+
+      // Generate new QR code image
+      await QRCode.toFile(qrImagePath, `${eventId}`);
+      console.log(`QR Code generated: ${qrImagePath}`);
+
+      // Update image path in DB
+      await eventModel.updateQRCodePath(eventId, qrCodeImagePath);
+    } else if (eventData.qr_code_option === 'no_qr') {
+      // Remove QR image file if exists
+      if (fs.existsSync(qrImagePath)) {
+        fs.unlinkSync(qrImagePath);
+        console.log(`QR Code deleted: ${qrImagePath}`);
+      }
+
+      // Clear image path in DB
+      await eventModel.updateQRCodePath(eventId, null);
     }
 
     res.json({ message: 'Event updated successfully' });
