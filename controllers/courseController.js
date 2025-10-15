@@ -1,4 +1,5 @@
 const courseModel = require('../models/courseModel');
+const db = require('../config/db');
 
 const registerCourse = async (req, res) => {
   try {
@@ -43,7 +44,20 @@ const updateCourse = async (req, res) => {
   }
 };
 
+// Count total courses
+const countCourses = async (req, res) => {
+  try {
+    const [rows] = await db.query('SELECT COUNT(*) AS total FROM courses');
+    res.json({ total: rows[0].total });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error counting courses' });
+  }
+};
+
+
 module.exports = {
+  countCourses,
   registerCourse,
   getCourses,
   updateCourse
