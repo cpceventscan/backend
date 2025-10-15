@@ -7,6 +7,14 @@ const db = require('./config/db');
 const bcrypt = require('bcryptjs');
 dotenv.config();
 
+const MySQLStore = require('express-mysql-session')(session);
+
+const sessionStore = new MySQLStore({
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+});
 
 
 // Import route modules
@@ -46,12 +54,19 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // ✅ Session setup (note: no need to include CORS stuff here)
-app.use(session({
-  secret: 'simplekey123',
-  resave: false,
-  saveUninitialized: true,
-  cookie: { secure: false } // should be true only in production with HTTPS
-}));
+app.use(
+  session({
+    secret: 'simplekey123',
+    resave: false,
+    saveUninitialized: false,
+    store: sessionStore, // ✅ persistent store
+    cookie: {
+      secure: true,
+      sameSite: 'none',
+      maxAge: 24 * 60 * 60 * 1000, // 1 day
+    },
+  })
+);
 
 // Mount API routes
 app.use('/api/events', eventRoutes);
