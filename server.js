@@ -13,10 +13,15 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 /* =========================
+   ✅ Trust Proxy (required for Render HTTPS)
+   ========================= */
+app.set('trust proxy', 1);
+
+/* =========================
    ✅ CORS Configuration
    ========================= */
 const corsOptions = {
-  origin: ['https://cpceventscan.com'], // production domain
+  origin: ['https://cpceventscan.com'], // ✅ your frontend domain
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -46,8 +51,10 @@ app.use(
     saveUninitialized: false,
     store: sessionStore,
     cookie: {
-      secure: true,
-      sameSite: 'none',
+      secure: true, // ✅ Only send cookie over HTTPS
+      sameSite: 'none', // ✅ Required for cross-origin
+      httpOnly: true,
+      domain: '.cpceventscan.com', // ✅ Enable sharing between subdomains
       maxAge: 24 * 60 * 60 * 1000, // 1 day
     },
   })
@@ -116,7 +123,7 @@ app.get('/api/protected', (req, res) => {
    ✅ Default Route
    ========================= */
 app.get('/', (req, res) => {
-  res.send('CPC EventScan Backend Running 🚀');
+  res.send('🚀 CPC EventScan Backend Running Successfully!');
 });
 
 /* =========================
