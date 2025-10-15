@@ -1,7 +1,7 @@
 const mysql = require('mysql2/promise');
 
 const pool = mysql.createPool({
-  host: process.env.DB_HOST || 'srv123.main-hosting.eu',
+  host: process.env.DB_HOST || 'srv1858.hstgr.io',
   user: process.env.DB_USER || 'u704382877_cpc',
   password: process.env.DB_PASSWORD || 'CPCeventscan2005.',
   database: process.env.DB_NAME || 'u704382877_cpcevent',
