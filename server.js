@@ -3,7 +3,6 @@ const path = require('path');
 const cors = require('cors');
 const session = require('express-session');
 const dotenv = require('dotenv');
-const bcrypt = require('bcryptjs');
 const MySQLStore = require('express-mysql-session')(session);
 const db = require('./config/db');
 
@@ -13,7 +12,7 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 /* =========================
-   ✅ Trust Proxy (required for Render HTTPS)
+   ✅ Required for HTTPS proxy on Render
    ========================= */
 app.set('trust proxy', 1);
 
@@ -21,8 +20,8 @@ app.set('trust proxy', 1);
    ✅ CORS Configuration
    ========================= */
 const corsOptions = {
-  origin: ['https://cpceventscan.com'], // ✅ your frontend domain
-  credentials: true,
+  origin: ['https://cpceventscan.com'], // your Hostinger frontend
+  credentials: true, // allow cookies
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 };
@@ -32,7 +31,7 @@ app.use(cors(corsOptions));
    ✅ Express Middleware
    ========================= */
 app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ limit: '10mb', extended: true }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 /* =========================
    ✅ Session Configuration
@@ -51,10 +50,9 @@ app.use(
     saveUninitialized: false,
     store: sessionStore,
     cookie: {
-      secure: true, // ✅ Only send cookie over HTTPS
-      sameSite: 'none', // ✅ Required for cross-origin
+      secure: true, // only HTTPS
       httpOnly: true,
-      domain: '.cpceventscan.com', // ✅ Enable sharing between subdomains
+      sameSite: 'none', // allow cross-site
       maxAge: 24 * 60 * 60 * 1000, // 1 day
     },
   })
@@ -64,8 +62,8 @@ app.use(
    ✅ Import Routes
    ========================= */
 const adminRoutes = require('./routes/adminRoutes');
-const eventRoutes = require('./routes/eventRoutes');
 const studentRoutes = require('./routes/studentRoutes');
+const eventRoutes = require('./routes/eventRoutes');
 const courseRoutes = require('./routes/courseRoutes');
 const yearLevelRoutes = require('./routes/yearLevelRoutes');
 const sectionRoutes = require('./routes/sectionRoutes');
@@ -80,19 +78,19 @@ const updatesRoutes = require('./routes/updates');
 const userRoutes = require('./routes/userRoutes');
 
 /* =========================
-   ✅ API Routes
+   ✅ Routes
    ========================= */
-app.use('/api/events', eventRoutes);
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/api/admin', adminRoutes);
 app.use('/api/students', studentRoutes);
+app.use('/api/events', eventRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/year-level', yearLevelRoutes);
 app.use('/api/sections', sectionRoutes);
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api', volunteerRoutes);
 app.use('/api/absence-request', AbsenceRequest);
 app.use('/api/face', faceRoutes);
 app.use('/api/attendance', attendanceRoutes);
-app.use('/api/admin', adminRoutes);
 app.use('/api/twofa', twofaRoutes);
 app.use('/api/trivia', require('./routes/triviaRoutes'));
 app.use('/api/notifications', notificationRoutes);
@@ -101,34 +99,32 @@ app.use('/api/updates', updatesRoutes);
 app.use('/api/users', userRoutes);
 
 /* =========================
-   ✅ Session Check Routes
+   ✅ Session Check
    ========================= */
 app.get('/api/check-admin-session', (req, res) => {
+  console.log('Session:', req.session.admin);
   if (req.session.admin) {
-    res.json({ loggedIn: true, admin: req.session.admin });
-  } else {
-    res.json({ loggedIn: false });
+    return res.json({ loggedIn: true, admin: req.session.admin });
   }
+  res.json({ loggedIn: false });
 });
 
-app.get('/api/protected', (req, res) => {
+app.get('/api/check-student-session', (req, res) => {
+  console.log('Session:', req.session.student);
   if (req.session.student) {
-    res.json({ message: 'Authenticated', student: req.session.student });
-  } else {
-    res.status(401).json({ message: 'Not Authenticated' });
+    return res.json({ loggedIn: true, student: req.session.student });
   }
+  res.json({ loggedIn: false });
 });
 
 /* =========================
-   ✅ Default Route
+   ✅ Default
    ========================= */
 app.get('/', (req, res) => {
-  res.send('🚀 CPC EventScan Backend Running Successfully!');
+  res.send('🚀 CPC EventScan Backend running on Render');
 });
 
 /* =========================
-   ✅ Start Server
+   ✅ Start
    ========================= */
-app.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
