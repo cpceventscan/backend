@@ -109,12 +109,12 @@ app.get('/api/check-admin-session', (req, res) => {
   res.json({ loggedIn: false });
 });
 
-app.get('/api/check-student-session', (req, res) => {
-  console.log('Session:', req.session.student);
+app.get('/api/protected', (req, res) => {
   if (req.session.student) {
-    return res.json({ loggedIn: true, student: req.session.student });
+    res.json({ message: 'Authenticated', student: req.session.student });
+  } else {
+    res.status(401).json({ message: 'Not Authenticated' });
   }
-  res.json({ loggedIn: false });
 });
 
 /* =========================
