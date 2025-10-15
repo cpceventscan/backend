@@ -31,7 +31,7 @@ const PORT = process.env.PORT || 5000;
 // ✅ CORS configuration to allow PUT/DELETE from localhost:8100
 const corsOptions = {
   origin: [
-    'http://localhost:8100',     // local development
+    // 'http://localhost:8100',     // local development
     'https://cpceventscan.com',  // your live domain
   ],
   credentials: true,
