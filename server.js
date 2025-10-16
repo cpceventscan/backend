@@ -57,7 +57,8 @@ app.use(
     cookie: {
       secure: true, // HTTPS only
       httpOnly: true,
-      sameSite: 'none', // allow cross-site (needed for Safari)
+      sameSite: 'none', // allow cross-subdomain (needed for Safari)
+      domain: '.cpceventscan.com', // ✅ critical for iOS Safari
       maxAge: 24 * 60 * 60 * 1000, // 1 day
     },
   })
