@@ -20,10 +20,11 @@ app.set('trust proxy', 1);
    ✅ CORS Configuration
    ========================= */
 const corsOptions = {
-  origin: ['https://cpceventscan.com'], // your Hostinger frontend
+  origin: ['https://cpceventscan.com'], // exact domain, no trailing slash
   credentials: true, // allow cookies
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['set-cookie'], // <-- helps Safari recognize cookies
 };
 app.use(cors(corsOptions));
 
