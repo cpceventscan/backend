@@ -27,6 +27,7 @@ const corsOptions = {
   exposedHeaders: ['set-cookie'], // <-- helps Safari recognize cookies
 };
 app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 /* =========================
    ✅ Express Middleware
@@ -51,9 +52,9 @@ app.use(
     saveUninitialized: false,
     store: sessionStore,
     cookie: {
-      secure: true, // only HTTPS
-      httpOnly: true,
-      sameSite: 'none', // allow cross-site
+      secure: true,           // ✅ Must be true on Render (HTTPS)
+      httpOnly: true,         // ✅ Prevents JS access
+      sameSite: 'none',       // ✅ Required for cross-site (Safari fix)
       maxAge: 24 * 60 * 60 * 1000, // 1 day
     },
   })
