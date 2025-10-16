@@ -7,37 +7,38 @@ const MySQLStore = require('express-mysql-session')(session);
 const db = require('./config/db');
 
 dotenv.config();
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 /* =========================
-   ✅ Trust HTTPS proxy (Render)
+   ✅ Required for HTTPS proxy (Render)
    ========================= */
 app.set('trust proxy', 1);
 
 /* =========================
-   ✅ CORS Configuration (Safari-safe)
+   ✅ CORS Configuration (Safari safe)
    ========================= */
-const FRONTEND_ORIGIN = 'https://cpceventscan.com';
-
 const corsOptions = {
-  origin: FRONTEND_ORIGIN,
-  credentials: true,
+  origin: [
+    'https://cpceventscan.com',
+    'https://www.cpceventscan.com', // in case user visits www version
+  ],
+  credentials: true, // allow cookies
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  exposedHeaders: ['set-cookie'],
+  exposedHeaders: ['set-cookie'], // Safari requires this for cookies
 };
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // Handle Safari preflight
 
 /* =========================
-   ✅ Body Parsing
+   ✅ Express Middleware
    ========================= */
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 /* =========================
-   ✅ Session Store & Cookie
+   ✅ Session Configuration (Safari Compatible)
    ========================= */
 const sessionStore = new MySQLStore({
   host: process.env.DB_HOST || 'srv1858.hstgr.io',
@@ -52,11 +53,11 @@ app.use(
     resave: false,
     saveUninitialized: false,
     store: sessionStore,
-    proxy: true, // <-- ensures Express respects trust proxy for secure cookies
+    proxy: true, // important for secure cookies on Render
     cookie: {
-      secure: true,           // HTTPS only
+      secure: true, // HTTPS only
       httpOnly: true,
-      sameSite: 'none',       // Required for cross-site (Safari fix)
+      sameSite: 'none', // allow cross-site (needed for Safari)
       maxAge: 24 * 60 * 60 * 1000, // 1 day
     },
   })
@@ -66,7 +67,6 @@ app.use(
    ✅ Routes
    ========================= */
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
 app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/students', require('./routes/studentRoutes'));
 app.use('/api/events', require('./routes/eventRoutes'));
@@ -88,6 +88,7 @@ app.use('/api/users', require('./routes/userRoutes'));
    ✅ Session Check
    ========================= */
 app.get('/api/check-admin-session', (req, res) => {
+  console.log('Session:', req.session.admin);
   if (req.session.admin) {
     return res.json({ loggedIn: true, admin: req.session.admin });
   }
@@ -96,19 +97,20 @@ app.get('/api/check-admin-session', (req, res) => {
 
 app.get('/api/protected', (req, res) => {
   if (req.session.student) {
-    return res.json({ message: 'Authenticated', student: req.session.student });
+    res.json({ message: 'Authenticated', student: req.session.student });
+  } else {
+    res.status(401).json({ message: 'Not Authenticated' });
   }
-  res.status(401).json({ message: 'Not Authenticated' });
 });
 
 /* =========================
-   ✅ Root & Fallback
+   ✅ Default
    ========================= */
 app.get('/', (req, res) => {
   res.send('🚀 CPC EventScan Backend running on Render');
 });
 
 /* =========================
-   ✅ Start Server
+   ✅ Start
    ========================= */
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
