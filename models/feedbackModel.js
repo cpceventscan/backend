@@ -71,7 +71,7 @@ JOIN courses c ON c.course_id = s.course_id
 JOIN sections sec ON sec.section_id = s.section_id
 JOIN year_levels y ON y.year_id = s.year_id
 JOIN events e ON e.id = f.id
-WHERE f.id = ?
+WHERE f.id = 48
 GROUP BY f.feedback_id
 ORDER BY f.created_at DESC;
   `;
@@ -113,3 +113,4 @@ const getAllFeedback = async () => {
 };
 
 module.exports = { saveFeedback, getFeedbackByEvent, getAllFeedback, getFeedbackByEventtitle  };
+
