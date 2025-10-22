@@ -169,13 +169,23 @@ const loginStudent = async (req, res) => {
 
   try {
     const [rows] = await db.execute(`
-      SELECT s.*, c.course_code, sec.section_name, yl.year_level, tf.status AS twofa_status
-      FROM students s
-      LEFT JOIN courses c ON s.course_id = c.course_id
-      LEFT JOIN sections sec ON s.section_id = sec.section_id
-      LEFT JOIN year_levels yl ON s.year_id = yl.year_id
-      LEFT JOIN two_factor tf ON s.student_id = tf.student_id
-      WHERE s.student_id = ?
+      SELECT 
+        s.*, 
+        c.course_code, 
+        sec.section_name, 
+        yl.year_level, 
+        tf.status AS twofa_status,
+        fi.id AS face_image_id,
+        fi.image AS face_image,
+        fi.created_at AS face_image_created_at,
+        fi.luxand_id AS face_luxand_id
+    FROM students s
+    LEFT JOIN courses c ON s.course_id = c.course_id
+    LEFT JOIN sections sec ON s.section_id = sec.section_id
+    LEFT JOIN year_levels yl ON s.year_id = yl.year_id
+    LEFT JOIN two_factor tf ON s.student_id = tf.student_id
+    LEFT JOIN face_images fi ON s.student_id = fi.student_id
+    WHERE s.student_id = ?;
     `, [student_id]);
 
     const student = rows[0];

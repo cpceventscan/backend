@@ -113,4 +113,3 @@ const getAllFeedback = async () => {
 };
 
 module.exports = { saveFeedback, getFeedbackByEvent, getAllFeedback, getFeedbackByEventtitle  };
-

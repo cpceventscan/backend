@@ -221,7 +221,9 @@ LEFT JOIN sections sec ON s.section_id = sec.section_id
 JOIN events ev ON ea.id = ev.id
 LEFT JOIN student_request sr 
        ON ea.student_id = sr.student_id 
-WHERE ea.id = ?;
+WHERE ea.id = ?
+GROUP BY ea.student_id;
+;
 `,
     [event_id]
   );
