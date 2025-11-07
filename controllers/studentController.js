@@ -389,7 +389,8 @@ FROM event_attendance a
 JOIN events e ON a.id = e.id
 LEFT JOIN students s ON a.student_id = s.student_id
 LEFT JOIN student_request sr ON a.student_id = sr.student_id
-WHERE a.student_id = ?`,
+WHERE a.student_id = ?
+GROUP BY e.id`,
       [studentId]
     );
 
@@ -415,3 +416,4 @@ module.exports = {
   verifyTwoFA,
   resendTwoFactorCode,
 };
+
