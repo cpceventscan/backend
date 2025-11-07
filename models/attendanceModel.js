@@ -244,17 +244,25 @@ function getEventDetails(event_id) {
         ELSE 0
     END AS canSettle
 
-FROM event_attendance ea
-JOIN students s ON ea.student_id = s.student_id
+FROM students s
+LEFT JOIN event_attendance ea 
+       ON s.student_id = ea.student_id 
+       AND ea.id = 61
+LEFT JOIN student_request sr 
+       ON s.student_id = sr.student_id 
+       AND sr.id = ?  -- link request to event
+LEFT JOIN events ev 
+       ON ev.id = ?
 LEFT JOIN courses c ON s.course_id = c.course_id
 LEFT JOIN year_levels y ON s.year_id = y.year_id
 LEFT JOIN sections sec ON s.section_id = sec.section_id
-JOIN events ev ON ea.id = ev.id
-LEFT JOIN student_request sr 
-       ON ea.student_id = sr.student_id 
-WHERE ea.id = ?
-GROUP BY ea.student_id;
-;
+
+-- ✅ Only show students who attended OR have a student_request
+WHERE ea.student_id IS NOT NULL 
+   OR sr.student_id IS NOT NULL
+
+GROUP BY s.student_id
+ORDER BY s.last_name, s.first_name;
 `,
     [event_id]
   );
@@ -378,5 +386,6 @@ module.exports = {
   updateMorningTriviaMissed,
   updateAfternoonTriviaMissed
 };
+
 
 
