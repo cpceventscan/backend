@@ -342,55 +342,79 @@ const getAttendanceLogs = async (req, res) => {
   try {
     const [rows] = await db.query(
       `SELECT 
-    a.attendance_id,
-    a.student_id,
-    s.first_name,
-    s.last_name,
-    a.id,
-
-    -- Map status
-    CASE a.status
-        WHEN 0 THEN 'Unsettled'
-        WHEN 1 THEN 'Settled'
-        ELSE 'N/A'
-    END AS attendance_status,
-
-    -- Morning times
-    DATE_FORMAT(a.time_in, '%l:%i %p') AS time_in_formatted,
-    CASE 
-        WHEN a.trivia_time_in = '1900-01-01 00:00:00' THEN 'Missed'
-        ELSE DATE_FORMAT(a.trivia_time_in, '%l:%i %p')
-    END AS trivia_time_in_formatted,
-    DATE_FORMAT(a.time_out, '%l:%i %p') AS time_out_formatted,
-
-    -- Afternoon times
-    DATE_FORMAT(a.afternoon_time_in, '%l:%i %p') AS afternoon_time_in_formatted,
-    CASE 
-        WHEN a.afternoon_trivia_time_in = '1900-01-01 00:00:00' THEN 'Missed'
-        ELSE DATE_FORMAT(a.afternoon_trivia_time_in, '%l:%i %p')
-    END AS afternoon_trivia_time_in_formatted,
-    DATE_FORMAT(a.afternoon_time_out, '%l:%i %p') AS afternoon_time_out_formatted,
-
-    a.remarks,
-    a.absence_request,
+    e.id AS event_id,
     e.event_name,
     DATE_FORMAT(e.start_date_time, '%Y-%m-%d %l:%i %p') AS start_date_time_formatted,
     DATE_FORMAT(e.end_date_time, '%Y-%m-%d %l:%i %p') AS end_date_time_formatted,
+
+    s.student_id,
+    s.first_name,
+    s.last_name,
+
+    a.attendance_id,
+    CASE a.status
+        WHEN 0 THEN 'Unsettled'
+        WHEN 1 THEN 'Settled'
+        ELSE 'No Attendance'
+    END AS attendance_status,
+
+    -- Morning times
+    CASE 
+        WHEN a.time_in IS NULL THEN 'No Record'
+        ELSE DATE_FORMAT(a.time_in, '%l:%i %p')
+    END AS time_in_formatted,
+
+    CASE 
+        WHEN a.trivia_time_in = '1900-01-01 00:00:00' THEN 'Missed'
+        WHEN a.trivia_time_in IS NOT NULL THEN DATE_FORMAT(a.trivia_time_in, '%l:%i %p')
+        ELSE 'No Record'
+    END AS trivia_time_in_formatted,
+
+    CASE 
+        WHEN a.time_out IS NULL THEN 'No Record'
+        ELSE DATE_FORMAT(a.time_out, '%l:%i %p')
+    END AS time_out_formatted,
+
+    -- Afternoon times
+    CASE 
+        WHEN a.afternoon_time_in IS NULL THEN 'No Record'
+        ELSE DATE_FORMAT(a.afternoon_time_in, '%l:%i %p')
+    END AS afternoon_time_in_formatted,
+
+    CASE 
+        WHEN a.afternoon_trivia_time_in = '1900-01-01 00:00:00' THEN 'Missed'
+        WHEN a.afternoon_trivia_time_in IS NOT NULL THEN DATE_FORMAT(a.afternoon_trivia_time_in, '%l:%i %p')
+        ELSE 'No Record'
+    END AS afternoon_trivia_time_in_formatted,
+
+    CASE 
+        WHEN a.afternoon_time_out IS NULL THEN 'No Record'
+        ELSE DATE_FORMAT(a.afternoon_time_out, '%l:%i %p')
+    END AS afternoon_time_out_formatted,
+
+    a.remarks,
+    a.absence_request,
+
     sr.request_id,
     sr.absence_requests_id,
     CASE sr.status
         WHEN 2 THEN 'Rejected'
         WHEN 1 THEN 'Approved'
         WHEN 0 THEN 'Pending'
-        ELSE 'N/A'
+        ELSE 'No Request'
     END AS request_status
 
-FROM event_attendance a
-JOIN events e ON a.id = e.id
-LEFT JOIN students s ON a.student_id = s.student_id
-LEFT JOIN student_request sr ON a.student_id = sr.student_id
-WHERE a.student_id = ?
-GROUP BY e.id`,
+FROM events e
+CROSS JOIN (SELECT ? AS student_id) AS target_student  -- ✅ single student scope
+LEFT JOIN students s 
+    ON s.student_id = target_student.student_id
+LEFT JOIN event_attendance a 
+    ON a.id = e.id 
+    AND a.student_id = target_student.student_id
+LEFT JOIN student_request sr 
+    ON sr.id = e.id               -- ✅ link by event id
+    AND sr.student_id = target_student.student_id
+ORDER BY e.start_date_time DESC`,
       [studentId]
     );
 
@@ -416,4 +440,5 @@ module.exports = {
   verifyTwoFA,
   resendTwoFactorCode,
 };
+
 
