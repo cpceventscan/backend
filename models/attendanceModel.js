@@ -92,8 +92,7 @@ function getByStudent(student_id) {
     END AS status
 FROM event_attendance ea
 JOIN events e ON ea.id = e.id
-WHERE ea.student_id = ?
-GROUP BY e.id,
+WHERE ea.student_id = ?,
     [student_id]
   );
 }
@@ -354,3 +353,4 @@ module.exports = {
   updateAfternoonTriviaMissed
 
 };
+
