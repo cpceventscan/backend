@@ -100,30 +100,50 @@ function getEventAttendanceSummary() {
     DATE_FORMAT(e.start_date_time, '%Y-%m-%d') AS eventDate,
     e.start_date_time,
     e.end_date_time,
+
     CASE 
         WHEN NOW() > e.end_date_time THEN 'Completed'
         WHEN NOW() BETWEEN e.start_date_time AND e.end_date_time THEN 'Ongoing'
         ELSE 'Upcoming'
     END AS eventStats,
-    SUM(CASE WHEN ea.time_in IS NOT NULL THEN 1 ELSE 0 END) AS totalAttendees,
+
+    COUNT(DISTINCT ea.student_id) AS totalAttendees,
+
+    -- ✅ Complete attendance: all times are present
     SUM(CASE 
-        WHEN (ea.time_in IS NOT NULL AND ea.time_out IS NOT NULL AND ea.trivia_time_in IS NOT NULL) 
+        WHEN ea.time_in IS NOT NULL 
+         AND ea.time_out IS NOT NULL 
+         AND ea.trivia_time_in IS NOT NULL 
         THEN 1 
         ELSE 0 
     END) AS completeAttendance,
+
+    -- ✅ Incomplete attendance: attended partially (some NULLs but not fully absent)
     SUM(CASE 
-        WHEN ea.time_in IS NULL 
-             OR ea.time_out IS NULL 
-             OR ea.trivia_time_in IS NULL 
+        WHEN (ea.time_in IS NOT NULL OR ea.time_out IS NOT NULL OR ea.trivia_time_in IS NOT NULL)
+         AND NOT (ea.time_in IS NOT NULL 
+              AND ea.time_out IS NOT NULL 
+              AND ea.trivia_time_in IS NOT NULL)
         THEN 1 
         ELSE 0 
     END) AS incompleteAttendance,
-    SUM(CASE WHEN ea.time_in IS NULL THEN 1 ELSE 0 END) AS totalAbsences,
-    COUNT(ea.id) AS totalRecords
+
+    -- ✅ Absence: no attendance record or all times missing
+    SUM(CASE 
+        WHEN ea.time_in IS NULL 
+         AND ea.time_out IS NULL 
+         AND ea.trivia_time_in IS NULL 
+        THEN 1 
+        ELSE 0 
+    END) AS totalAbsences,
+
+    COUNT(ea.attendance_id) AS totalRecords
+
 FROM events e
-LEFT JOIN event_attendance ea ON ea.id = e.id  
+LEFT JOIN event_attendance ea ON ea.id = e.id
 GROUP BY e.id, e.event_name, e.start_date_time, e.end_date_time
-ORDER BY e.start_date_time DESC;`
+ORDER BY e.start_date_time DESC;
+`
   );
 }
 
@@ -347,3 +367,4 @@ module.exports = {
   updateMorningTriviaMissed,
   updateAfternoonTriviaMissed
 };
+
