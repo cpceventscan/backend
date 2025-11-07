@@ -79,15 +79,21 @@ function getBystudEvent(event_id, student_id) {
 
 function getByStudent(student_id) {
   return db.execute(
-    `SELECT ea.attendance_id, e.event_name AS eventName, DATE_FORMAT(e.start_date_time, '%b %d, %Y') AS date,
-            ea.time_in AS timeIn, ea.time_out AS timeOut, ea.remarks,
-            CASE ea.status
-                WHEN 1 THEN 'cleared'
-                ELSE 'unsettled'
-            END AS status
-     FROM event_attendance ea
-     JOIN events e ON ea.id = e.id
-     WHERE ea.student_id = ?`,
+    `SELECT 
+    ea.attendance_id, 
+    e.event_name AS eventName, 
+    DATE_FORMAT(e.start_date_time, '%b %d, %Y') AS date,
+    ea.time_in AS timeIn, 
+    ea.time_out AS timeOut, 
+    ea.remarks,
+    CASE ea.status
+        WHEN 1 THEN 'cleared'
+        ELSE 'unsettled'
+    END AS status
+FROM event_attendance ea
+JOIN events e ON ea.id = e.id
+WHERE ea.student_id = ?
+GROUP BY e.id,
     [student_id]
   );
 }
@@ -346,4 +352,5 @@ module.exports = {
   getAttendanceControlsByEvent,
   updateMorningTriviaMissed,
   updateAfternoonTriviaMissed
+
 };
