@@ -107,9 +107,10 @@ function getEventAttendanceSummary() {
         ELSE 'Upcoming'
     END AS eventStats,
 
+    -- ✅ Total students who have attendance or absence record
     COUNT(DISTINCT ea.student_id) AS totalAttendees,
 
-    -- ✅ Complete attendance: all times are present
+    -- ✅ Complete attendance: all times present
     SUM(CASE 
         WHEN ea.time_in IS NOT NULL 
          AND ea.time_out IS NOT NULL 
@@ -118,7 +119,7 @@ function getEventAttendanceSummary() {
         ELSE 0 
     END) AS completeAttendance,
 
-    -- ✅ Incomplete attendance: attended partially (some NULLs but not fully absent)
+    -- ✅ Incomplete attendance: partial attendance
     SUM(CASE 
         WHEN (ea.time_in IS NOT NULL OR ea.time_out IS NOT NULL OR ea.trivia_time_in IS NOT NULL)
          AND NOT (ea.time_in IS NOT NULL 
@@ -128,21 +129,31 @@ function getEventAttendanceSummary() {
         ELSE 0 
     END) AS incompleteAttendance,
 
-    -- ✅ Absence: no attendance record or all times missing
+    -- ✅ Absence: no attendance record AND (optional) absence request logic
     SUM(CASE 
+        WHEN ea.attendance_id IS NULL 
+             AND sr.request_id IS NULL 
+        THEN 0  -- No attendance and no absence request → not counted
+        WHEN ea.attendance_id IS NULL 
+             AND sr.request_id IS NOT NULL 
+        THEN 1  -- Absence request exists → count as absence
         WHEN ea.time_in IS NULL 
-         AND ea.time_out IS NULL 
-         AND ea.trivia_time_in IS NULL 
-        THEN 1 
+             AND ea.time_out IS NULL 
+             AND ea.trivia_time_in IS NULL 
+        THEN 1  -- No check-ins → absence
         ELSE 0 
     END) AS totalAbsences,
 
     COUNT(ea.attendance_id) AS totalRecords
 
 FROM events e
-LEFT JOIN event_attendance ea ON ea.id = e.id
+LEFT JOIN event_attendance ea 
+    ON ea.id = e.id
+LEFT JOIN student_request sr 
+    ON sr.id = e.id 
+   AND sr.status IN (0, 1, 2)  -- Pending, Approved, or Rejected (adjust as needed)
 GROUP BY e.id, e.event_name, e.start_date_time, e.end_date_time
-ORDER BY e.start_date_time DESC;
+ORDER BY e.start_date_time DESC;;
 `
   );
 }
@@ -367,4 +378,5 @@ module.exports = {
   updateMorningTriviaMissed,
   updateAfternoonTriviaMissed
 };
+
 
