@@ -348,7 +348,8 @@ const getAttendanceLogs = async (req, res) => {
     DATE_FORMAT(e.end_date_time, '%Y-%m-%d %l:%i %p') AS end_date_time_formatted,
 
     s.student_id,
-    CONCAT(s.first_name, ' ', s.last_name) AS student_name,
+    s.first_name,
+    s.last_name,
     a.attendance_id,
 
     -- ✅ Attendance Status Logic
@@ -479,6 +480,7 @@ module.exports = {
   verifyTwoFA,
   resendTwoFactorCode,
 };
+
 
 
 
