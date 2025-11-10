@@ -2,9 +2,9 @@ const SectionModel = require('../models/sectionModel');
 
 const SectionController = {
   createSection: async (req, res) => {
-    const { courseId, yearId, sectionName } = req.body;
+    const { sectionName } = req.body;
     try {
-      const result = await SectionModel.createSection(courseId, yearId, sectionName);
+      const result = await SectionModel.createSection(sectionName);
       res.json({ message: 'Section created successfully.', id: result.insertId });
     } catch (err) {
       console.error(err);
@@ -24,10 +24,10 @@ const SectionController = {
 
     updateSection: async (req, res) => {
         const { sectionId } = req.params;
-        const { courseId, yearId, sectionName } = req.body;
+        const { sectionName } = req.body;
 
         try {
-            await SectionModel.updateSection(sectionId, courseId, yearId, sectionName);
+            await SectionModel.updateSection(sectionId, sectionName);
             res.status(200).json({ message: 'Section updated successfully.' });
         } catch (error) {
             console.error('Error updating section:', error);

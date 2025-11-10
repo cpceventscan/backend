@@ -1,14 +1,14 @@
 const YearLevelModel = require('../models/yearLevelModel');
 
 const addYearLevel = async (req, res) => {
-  const { courseId, yearLevel } = req.body;
+  const { yearLevel } = req.body;
 
-  if (!courseId || !yearLevel) {
+  if (!yearLevel) {
     return res.status(400).json({ error: 'All fields are required' });
   }
 
   try {
-    const result = await YearLevelModel.createYearLevel(courseId, yearLevel);
+    const result = await YearLevelModel.createYearLevel(yearLevel);
     res.json({ message: 'Year level added successfully', result });
   } catch (error) {
     console.error('Error:', error);
@@ -28,14 +28,14 @@ const getAllYears = async (req, res) => {
 
 const updateYearLevel = async (req, res) => {
   const yearID = req.params.yearID;
-  const { courseId, yearLevel } = req.body;
+  const { yearLevel } = req.body;
 
-  if (!yearID || !courseId || !yearLevel) {
+  if (!yearID|| !yearLevel) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
   try {
-    const result = await YearLevelModel.updateYearLevel(yearID, courseId, yearLevel);
+    const result = await YearLevelModel.updateYearLevel(yearID, yearLevel);
     res.json({ message: 'Year level updated successfully', result });
   } catch (error) {
     console.error(error);
