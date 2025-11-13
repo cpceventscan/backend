@@ -1,8 +1,7 @@
-const express = require('express');
-const path = require('path');
 const cors = require('cors');
 const session = require('express-session');
 const dotenv = require('dotenv');
+const MySQLStore = require('express-mysql-session')(session);
 const db = require('./config/db');
 const bcrypt = require('bcryptjs');
 dotenv.config();
@@ -28,16 +27,46 @@ const userRoutes = require('./routes/userRoutes');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+/* =========================
+   ✅ Required for HTTPS proxy (Render)
+   ========================= */
+app.set('trust proxy', 1);
+
+/* =========================
+   ✅ CORS Configuration (Safari safe)
+   ========================= */
 // ✅ CORS configuration to allow PUT/DELETE from localhost:8100
 const corsOptions = {
+  origin: [
+    'https://cpceventscan.com',
+    'https://www.cpceventscan.com', // in case user visits www version
+  ],
+  credentials: true, // allow cookies
   origin: 'http://localhost:8100',
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['set-cookie'], // Safari requires this for cookies
   allowedHeaders: ['Content-Type', 'Authorization']
 };
+app.use(cors(corsOptions));
 
+/* =========================
+   ✅ Express Middleware
+   ========================= */
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+/* =========================
+   ✅ Session Configuration (Safari Compatible)
+   ========================= */
+const sessionStore = new MySQLStore({
+  host: process.env.DB_HOST || 'srv1858.hstgr.io',
+  user: process.env.DB_USER || 'u704382877_cpc',
+  password: process.env.DB_PASSWORD || 'CPCeventscan2005.',
+  database: process.env.DB_NAME || 'u704382877_cpcevent',
+});
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -50,6 +79,26 @@ app.use(session({
   cookie: { secure: false } // should be true only in production with HTTPS
 }));
 
+app.use(
+  session({
+    secret: 'simplekey123',
+    resave: false,
+    saveUninitialized: false,
+    store: sessionStore,
+    proxy: true, // important for secure cookies on Render
+    cookie: {
+      secure: true, // HTTPS only
+      httpOnly: true,
+      sameSite: 'none', // allow cross-subdomain (needed for Safari)
+      domain: '.cpceventscan.com', // ✅ critical for iOS Safari
+      maxAge: 24 * 60 * 60 * 1000, // 1 day
+    },
+  })
+);
+
+/* =========================
+   ✅ Routes
+   ========================= */
 // Mount API routes
 app.use('/api/events', eventRoutes);
 app.use('/api/students', studentRoutes);
@@ -57,6 +106,17 @@ app.use('/api/courses', courseRoutes);
 app.use('/api/year-level', yearLevelRoutes);
 app.use('/api/sections', sectionRoutes);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/api/admin', require('./routes/adminRoutes'));
+app.use('/api/students', require('./routes/studentRoutes'));
+app.use('/api/events', require('./routes/eventRoutes'));
+app.use('/api/courses', require('./routes/courseRoutes'));
+app.use('/api/year-level', require('./routes/yearLevelRoutes'));
+app.use('/api/sections', require('./routes/sectionRoutes'));
+app.use('/api', require('./routes/volunteerRoutes'));
+app.use('/api/absence-request', require('./routes/absenceRoutes'));
+app.use('/api/face', require('./routes/faceRoutes'));
+app.use('/api/attendance', require('./routes/attendanceRoutes'));
+app.use('/api/twofa', require('./routes/twofaRoutes'));
 app.use('/api', volunteerRoutes);
 app.use('/api/absence-request', AbsenceRequest);
 app.use('/api/face', faceRoutes);
@@ -64,27 +124,43 @@ app.use('/api/attendance', attendanceRoutes);
 app.use('/api/admin', adminRoutes);
 app.use("/api/twofa", twofaRoutes);
 app.use('/api/trivia', require('./routes/triviaRoutes'));
+app.use('/api/notifications', require('./routes/notificationRoutes'));
+app.use('/api/feedback', require('./routes/feedbackRoutes'));
+app.use('/api/updates', require('./routes/updates'));
+app.use('/api/users', require('./routes/userRoutes'));
+
+/* =========================
+   ✅ Session Check
+   ========================= */
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/updates', updatesRoutes);
 app.use('/api/users', userRoutes);
 app.get('/api/check-admin-session', (req, res) => {
-  if (req.session.admin) {
+  console.log('Session:', req.session.admin);
+if (req.session.admin) {
+    return res.json({ loggedIn: true, admin: req.session.admin });
     res.json({ loggedIn: true, admin: req.session.admin });
   } else {
     res.json({ loggedIn: false });
-  }
+}
+  res.json({ loggedIn: false });
 });
 
 // ✅ Session check route
 app.get('/api/protected', (req, res) => {
-  if (req.session.student) {
-    res.json({ message: 'Authenticated', student: req.session.student });
-  } else {
-    res.status(401).json({ message: 'Not Authenticated' });
-  }
+if (req.session.student) {
+res.json({ message: 'Authenticated', student: req.session.student });
+@@ -104,14 +85,96 @@ app.get('/api/protected', (req, res) => {
+}
 });
 
+/* =========================
+   ✅ Default
+   ========================= */
+app.get('/', (req, res) => {
+  res.send('🚀 CPC EventScan Backend running on Render');
+});
 // ✅ Login route with session
 // ✅ Login route with 2FA check
 // app.post('/api/students/auth-login', async (req, res) => {
@@ -176,5 +252,8 @@ app.get('/api/protected', (req, res) => {
 //   }
 // });
 
-// Start server
-app.listen(PORT, () => console.log(`Server is running on http://localhost:${PORT}`));
+/* =========================
+   ✅ Start
+   ========================= */
+app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+
