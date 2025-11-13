@@ -1,7 +1,6 @@
 const cors = require('cors');
 const session = require('express-session');
 const dotenv = require('dotenv');
-const MySQLStore = require('express-mysql-session')(session);
 const db = require('./config/db');
 const bcrypt = require('bcryptjs');
 const express = require('express');
@@ -98,3 +97,4 @@ app.get('/', (req, res) => {
    ✅ Start server
    ========================= */
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+
