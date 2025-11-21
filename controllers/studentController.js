@@ -405,7 +405,7 @@ const getAttendanceLogs = async (req, res) => {
     END AS request_status
 
 FROM events e
-CROSS JOIN (SELECT 20220773 AS student_id) AS target_student
+CROSS JOIN (SELECT ? AS student_id) AS target_student
 LEFT JOIN students s 
     ON s.student_id = target_student.student_id
 LEFT JOIN event_attendance a 
@@ -441,6 +441,7 @@ module.exports = {
   verifyTwoFA,
   resendTwoFactorCode,
 };
+
 
 
 
