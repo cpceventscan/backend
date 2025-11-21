@@ -347,12 +347,12 @@ const getAttendanceLogs = async (req, res) => {
     DATE_FORMAT(e.start_date_time, '%Y-%m-%d %l:%i %p') AS start_date_time_formatted,
     DATE_FORMAT(e.end_date_time, '%Y-%m-%d %l:%i %p') AS end_date_time_formatted,
 
-    MAX(s.student_id) AS student_id,
-    MAX(s.first_name) AS first_name,
-    MAX(s.last_name) AS last_name,
+    s.student_id,
+    s.first_name,
+    s.last_name,
 
-    MAX(a.attendance_id) AS attendance_id,
-    CASE MAX(a.status)
+    a.attendance_id,
+    CASE a.status
         WHEN 0 THEN 'Unsettled'
         WHEN 1 THEN 'Settled'
         ELSE 'No Attendance'
@@ -360,44 +360,44 @@ const getAttendanceLogs = async (req, res) => {
 
     -- Morning times
     CASE 
-        WHEN MAX(a.time_in) IS NULL THEN 'No Record'
-        ELSE DATE_FORMAT(MAX(a.time_in), '%l:%i %p')
+        WHEN a.time_in IS NULL THEN 'No Record'
+        ELSE DATE_FORMAT(a.time_in, '%l:%i %p')
     END AS time_in_formatted,
 
     CASE 
-        WHEN MAX(a.trivia_time_in) = '1900-01-01 00:00:00' THEN 'Missed'
-        WHEN MAX(a.trivia_time_in) IS NOT NULL THEN DATE_FORMAT(MAX(a.trivia_time_in), '%l:%i %p')
+        WHEN a.trivia_time_in = '1900-01-01 00:00:00' THEN 'Missed'
+        WHEN a.trivia_time_in IS NOT NULL THEN DATE_FORMAT(a.trivia_time_in, '%l:%i %p')
         ELSE 'No Record'
     END AS trivia_time_in_formatted,
 
     CASE 
-        WHEN MAX(a.time_out) IS NULL THEN 'No Record'
-        ELSE DATE_FORMAT(MAX(a.time_out), '%l:%i %p')
+        WHEN a.time_out IS NULL THEN 'No Record'
+        ELSE DATE_FORMAT(a.time_out, '%l:%i %p')
     END AS time_out_formatted,
 
     -- Afternoon times
     CASE 
-        WHEN MAX(a.afternoon_time_in) IS NULL THEN 'No Record'
-        ELSE DATE_FORMAT(MAX(a.afternoon_time_in), '%l:%i %p')
+        WHEN a.afternoon_time_in IS NULL THEN 'No Record'
+        ELSE DATE_FORMAT(a.afternoon_time_in, '%l:%i %p')
     END AS afternoon_time_in_formatted,
 
     CASE 
-        WHEN MAX(a.afternoon_trivia_time_in) = '1900-01-01 00:00:00' THEN 'Missed'
-        WHEN MAX(a.afternoon_trivia_time_in) IS NOT NULL THEN DATE_FORMAT(MAX(a.afternoon_trivia_time_in), '%l:%i %p')
+        WHEN a.afternoon_trivia_time_in = '1900-01-01 00:00:00' THEN 'Missed'
+        WHEN a.afternoon_trivia_time_in IS NOT NULL THEN DATE_FORMAT(a.afternoon_trivia_time_in, '%l:%i %p')
         ELSE 'No Record'
     END AS afternoon_trivia_time_in_formatted,
 
     CASE 
-        WHEN MAX(a.afternoon_time_out) IS NULL THEN 'No Record'
-        ELSE DATE_FORMAT(MAX(a.afternoon_time_out), '%l:%i %p')
+        WHEN a.afternoon_time_out IS NULL THEN 'No Record'
+        ELSE DATE_FORMAT(a.afternoon_time_out, '%l:%i %p')
     END AS afternoon_time_out_formatted,
 
-    MAX(a.remarks) AS remarks,
-    MAX(a.absence_request) AS absence_request,
+    a.remarks,
+    a.absence_request,
 
-    MAX(sr.request_id) AS request_id,
-    MAX(sr.absence_requests_id) AS absence_requests_id,
-    CASE MAX(sr.status)
+    sr.request_id,
+    sr.absence_requests_id,
+    CASE sr.status
         WHEN 2 THEN 'Rejected'
         WHEN 1 THEN 'Approved'
         WHEN 0 THEN 'Pending'
@@ -405,16 +405,15 @@ const getAttendanceLogs = async (req, res) => {
     END AS request_status
 
 FROM events e
-CROSS JOIN (SELECT ? AS student_id) AS target_student
+CROSS JOIN (SELECT ? AS student_id) AS target_student  -- ✅ single student scope
 LEFT JOIN students s 
     ON s.student_id = target_student.student_id
 LEFT JOIN event_attendance a 
     ON a.id = e.id 
     AND a.student_id = target_student.student_id
 LEFT JOIN student_request sr 
-    ON sr.id = e.id                 
+    ON sr.id = e.id               -- ✅ link by event id
     AND sr.student_id = target_student.student_id
-GROUP BY e.id
 ORDER BY e.start_date_time DESC`,
       [studentId]
     );
@@ -441,7 +440,4 @@ module.exports = {
   verifyTwoFA,
   resendTwoFactorCode,
 };
-
-
-
 
