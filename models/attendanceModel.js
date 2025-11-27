@@ -171,7 +171,10 @@ function getEventDetails(event_id) {
   return db.execute(
     `SELECT 
     ea.attendance_id,
-    ev.*,
+    ev.id AS eventID,
+    ev.event_name,
+    ev.start_date_time,
+    ev.end_date_time,
     s.student_id,
     CONCAT(s.first_name, ' ', s.last_name) AS studName,
     CONCAT(c.course_code, ' ', y.year_level, ' ', sec.section_name) AS progYearSec,
@@ -242,7 +245,7 @@ function getEventDetails(event_id) {
 
     -- Attendance Status with absence request override
     CASE 
-        WHEN sr.absence_requests_id IS NOT NULL AND sr.status = 1 THEN 'Settled'
+        WHEN sr.absence_requests_id IS NOT NULL AND sr.status = 1 THEN 'Excused'
         WHEN ea.status = 1 THEN 'Settled'
         WHEN ea.status = 2 THEN 'Excused'
         ELSE 'Unsettled'
@@ -251,7 +254,10 @@ function getEventDetails(event_id) {
     CASE
         WHEN ea.status != 1 THEN 1
         ELSE 0
-    END AS canSettle
+    END AS canSettle,
+
+    -- ✅ Feedback
+    COUNT(f.feedback_id) AS feedbackCount
 
 FROM event_attendance ea
 JOIN students s ON ea.student_id = s.student_id
@@ -260,9 +266,11 @@ LEFT JOIN year_levels y ON s.year_id = y.year_id
 LEFT JOIN sections sec ON s.section_id = sec.section_id
 JOIN events ev ON ea.id = ev.id
 LEFT JOIN student_request sr 
-       ON ea.student_id = sr.student_id 
-WHERE ea.id = ?
-GROUP BY ea.student_id;
+       ON ea.student_id = sr.student_id AND sr.id = ev.id
+LEFT JOIN feedback f
+       ON f.student_id = s.student_id AND f.id = ev.id
+WHERE ev.id = ?
+GROUP BY ea.attendance_id;
 ;
 `,
     [event_id]
@@ -387,4 +395,5 @@ module.exports = {
   updateMorningTriviaMissed,
   updateAfternoonTriviaMissed
 };
+
 
