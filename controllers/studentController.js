@@ -185,11 +185,11 @@ const loginStudent = async (req, res) => {
     LEFT JOIN year_levels yl ON s.year_id = yl.year_id
     LEFT JOIN two_factor tf ON s.student_id = tf.student_id
     LEFT JOIN face_images fi ON s.student_id = fi.student_id
-    WHERE s.student_id = ?;
+    WHERE s.student_id = ? and s.status = 0;
     `, [student_id]);
 
     const student = rows[0];
-    if (!student) return res.status(401).json({ message: 'Invalid credentials' });
+    if (!student) return res.status(401).json({ message: 'Deactivated  Account' });
 
     const isMatch = await bcrypt.compare(password, student.password);
     if (!isMatch) return res.status(401).json({ message: 'Invalid credentials' });
@@ -440,4 +440,5 @@ module.exports = {
   verifyTwoFA,
   resendTwoFactorCode,
 };
+
 
