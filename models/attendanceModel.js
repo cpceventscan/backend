@@ -88,15 +88,37 @@ function getBystudEvent(event_id, student_id) {
 
 function getByStudent(student_id) {
   return db.execute(
-    `SELECT ea.attendance_id, e.event_name AS eventName, DATE_FORMAT(e.start_date_time, '%b %d, %Y') AS date,
-            ea.time_in AS timeIn, ea.time_out AS timeOut, ea.remarks,
-            CASE ea.status
-                WHEN 1 THEN 'cleared'
-                ELSE 'unsettled'
-            END AS status
-     FROM event_attendance ea
-     JOIN events e ON ea.id = e.id
-     WHERE ea.student_id = ?`,
+    `SELECT 
+    ea.attendance_id,
+    e.event_name AS eventName,
+    DATE_FORMAT(e.start_date_time, '%b %d, %Y') AS date,
+    ea.time_in AS timeIn,
+    ea.time_out AS timeOut,
+    ea.remarks,
+
+    -- Attendance status
+    CASE ea.status
+        WHEN 1 THEN 'cleared'
+        ELSE 'unsettled'
+    END AS status,
+
+    -- Absence Request Fields
+    sr.request_id,
+    sr.absence_requests_id,
+    CASE sr.status
+        WHEN 1 THEN 'approved'
+        WHEN 2 THEN 'rejected'
+        WHEN 0 THEN 'pending'
+        ELSE 'no request'
+    END AS requestStatus
+
+FROM event_attendance ea
+JOIN events e 
+    ON ea.id = e.id
+LEFT JOIN student_request sr  
+    ON sr.id = ea.id 
+    AND sr.student_id = ea.student_id   -- ensures request belongs to the same student
+WHERE ea.student_id = ?`,
     [student_id]
   );
 }
@@ -494,6 +516,7 @@ module.exports = {
   updateMorningTriviaMissed,
   updateAfternoonTriviaMissed
 };
+
 
 
 
