@@ -92,21 +92,18 @@ function getByStudent(student_id) {
     e.id AS event_id,
     e.event_name AS eventName,
     DATE_FORMAT(e.start_date_time, '%b %d, %Y') AS date,
-
     ea.attendance_id,
     ea.time_in AS timeIn,
     ea.time_out AS timeOut,
     ea.remarks,
-
-    -- Attendance status (NULL = absent)
+    
     CASE
-        WHEN sr.status = 1 THEN 'cleared'          -- approved absence request
-        WHEN ea.status = 1 THEN 'cleared'          -- present and cleared
-        WHEN ea.status = 0 THEN 'unsettled'        -- present but unsettled
-        ELSE 'absent'                              -- no attendance record
+        WHEN sr.status = 1 THEN 'cleared'
+        WHEN ea.status = 1 THEN 'cleared'
+        WHEN ea.status = 0 THEN 'unsettled'
+        ELSE 'absent'
     END AS status,
 
-    -- Absence request details
     sr.request_id,
     sr.absence_requests_id,
     CASE sr.status
@@ -125,8 +122,12 @@ LEFT JOIN student_request sr
     ON sr.id = e.id
     AND sr.student_id = ?
 
+-- 🔥 Only show events that have attendance OR absence request
+WHERE ea.attendance_id IS NOT NULL
+   OR sr.request_id IS NOT NULL
+
 ORDER BY e.start_date_time DESC`,
-    [student_id]
+    [student_id,student_id]
   );
 }
 
@@ -523,6 +524,7 @@ module.exports = {
   updateMorningTriviaMissed,
   updateAfternoonTriviaMissed
 };
+
 
 
 
