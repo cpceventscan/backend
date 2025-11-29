@@ -164,6 +164,36 @@ const updateAuth = async (req, res) => {
 /* =====================================================
    LOGIN WITH 2FA SUPPORT
 ===================================================== */
+// const loginStudent = async (req, res) => {
+//   const { student_id, password } = req.body;
+
+//   try {
+//     const [rows] = await db.execute(`
+//       SELECT 
+//         s.*, 
+//         c.course_code, 
+//         sec.section_name, 
+//         yl.year_level, 
+//         tf.status AS twofa_status,
+//         fi.id AS face_image_id,
+//         fi.image AS face_image,
+//         fi.created_at AS face_image_created_at,
+//         fi.luxand_id AS face_luxand_id
+//     FROM students s
+//     LEFT JOIN courses c ON s.course_id = c.course_id
+//     LEFT JOIN sections sec ON s.section_id = sec.section_id
+//     LEFT JOIN year_levels yl ON s.year_id = yl.year_id
+//     LEFT JOIN two_factor tf ON s.student_id = tf.student_id
+//     LEFT JOIN face_images fi ON s.student_id = fi.student_id
+//     WHERE s.student_id = ? and s.status = 0;
+//     `, [student_id]);
+
+//     const student = rows[0];
+//     if (!student) return res.status(401).json({ message: 'Deactivated  Account' });
+
+//     const isMatch = await bcrypt.compare(password, student.password);
+//     if (!isMatch) return res.status(401).json({ message: 'Invalid credentials' });
+
 const loginStudent = async (req, res) => {
   const { student_id, password } = req.body;
 
@@ -185,14 +215,16 @@ const loginStudent = async (req, res) => {
     LEFT JOIN year_levels yl ON s.year_id = yl.year_id
     LEFT JOIN two_factor tf ON s.student_id = tf.student_id
     LEFT JOIN face_images fi ON s.student_id = fi.student_id
-    WHERE s.student_id = ? and s.status = 0;
+    WHERE s.student_id = ?;
     `, [student_id]);
 
     const student = rows[0];
-    if (!student) return res.status(401).json({ message: 'Deactivated  Account' });
+    if (!student) return res.status(401).json({ message: 'Student account not found' });
 
     const isMatch = await bcrypt.compare(password, student.password);
     if (!isMatch) return res.status(401).json({ message: 'Invalid credentials' });
+
+    if(student.status !== 0) return res.status(403).json({message: 'Your Account is Deactivated'});
 
     // ✅ 2FA enabled
     if (student.twofa_status === 1) {
@@ -444,6 +476,7 @@ module.exports = {
   verifyTwoFA,
   resendTwoFactorCode,
 };
+
 
 
 
