@@ -88,83 +88,43 @@ function getBystudEvent(event_id, student_id) {
 
 function getByStudent(student_id) {
   return db.execute(
-    `SELECT 
+    `SELECT
     e.id AS event_id,
-    e.event_name,
-    DATE_FORMAT(e.start_date_time, '%Y-%m-%d %l:%i %p') AS start_date_time_formatted,
-    DATE_FORMAT(e.end_date_time, '%Y-%m-%d %l:%i %p') AS end_date_time_formatted,
+    e.event_name AS eventName,
+    DATE_FORMAT(e.start_date_time, '%b %d, %Y') AS date,
 
-    MAX(s.student_id) AS student_id,
-    MAX(s.first_name) AS first_name,
-    MAX(s.last_name) AS last_name,
+    ea.attendance_id,
+    ea.time_in AS timeIn,
+    ea.time_out AS timeOut,
+    ea.remarks,
 
-    MAX(a.attendance_id) AS attendance_id,
+    -- Attendance status (NULL = absent)
+    CASE
+        WHEN sr.status = 1 THEN 'cleared'          -- approved absence request
+        WHEN ea.status = 1 THEN 'cleared'          -- present and cleared
+        WHEN ea.status = 0 THEN 'unsettled'        -- present but unsettled
+        ELSE 'absent'                              -- no attendance record
+    END AS status,
 
-    -- Updated attendance status logic
-    CASE 
-        WHEN MAX(sr.status) = 1 THEN 'Settled'  -- Approved absence request
-        WHEN MAX(a.status) = 0 THEN 'Unsettled'
-        WHEN MAX(a.status) = 1 THEN 'Settled'
-        ELSE 'No Attendance'
-    END AS attendance_status,
-
-    -- Morning times
-    CASE 
-        WHEN MAX(a.time_in) IS NULL THEN 'No Record'
-        ELSE DATE_FORMAT(MAX(a.time_in), '%l:%i %p')
-    END AS time_in_formatted,
-
-    CASE 
-        WHEN MAX(a.trivia_time_in) = '1900-01-01 00:00:00' THEN 'Missed'
-        WHEN MAX(a.trivia_time_in) IS NOT NULL THEN DATE_FORMAT(MAX(a.trivia_time_in), '%l:%i %p')
-        ELSE 'No Record'
-    END AS trivia_time_in_formatted,
-
-    CASE 
-        WHEN MAX(a.time_out) IS NULL THEN 'No Record'
-        ELSE DATE_FORMAT(MAX(a.time_out), '%l:%i %p')
-    END AS time_out_formatted,
-
-    -- Afternoon times
-    CASE 
-        WHEN MAX(a.afternoon_time_in) IS NULL THEN 'No Record'
-        ELSE DATE_FORMAT(MAX(a.afternoon_time_in), '%l:%i %p')
-    END AS afternoon_time_in_formatted,
-
-    CASE 
-        WHEN MAX(a.afternoon_trivia_time_in) = '1900-01-01 00:00:00' THEN 'Missed'
-        WHEN MAX(a.afternoon_trivia_time_in) IS NOT NULL THEN DATE_FORMAT(MAX(a.afternoon_trivia_time_in), '%l:%i %p')
-        ELSE 'No Record'
-    END AS afternoon_trivia_time_in_formatted,
-
-    CASE 
-        WHEN MAX(a.afternoon_time_out) IS NULL THEN 'No Record'
-        ELSE DATE_FORMAT(MAX(a.afternoon_time_out), '%l:%i %p')
-    END AS afternoon_time_out_formatted,
-
-    MAX(a.remarks) AS remarks,
-    MAX(a.absence_request) AS absence_request,
-
-    MAX(sr.request_id) AS request_id,
-    MAX(sr.absence_requests_id) AS absence_requests_id,
-    CASE MAX(sr.status)
-        WHEN 2 THEN 'Rejected'
-        WHEN 1 THEN 'Approved'
-        WHEN 0 THEN 'Pending'
-        ELSE 'No Request'
-    END AS request_status
+    -- Absence request details
+    sr.request_id,
+    sr.absence_requests_id,
+    CASE sr.status
+        WHEN 1 THEN 'approved'
+        WHEN 2 THEN 'rejected'
+        WHEN 0 THEN 'pending'
+        ELSE 'no request'
+    END AS requestStatus
 
 FROM events e
-CROSS JOIN (SELECT ? AS student_id) AS target_student
-LEFT JOIN students s 
-    ON s.student_id = target_student.student_id
-LEFT JOIN event_attendance a 
-    ON a.id = e.id 
-    AND a.student_id = target_student.student_id
-LEFT JOIN student_request sr 
-    ON sr.id = e.id                 
-    AND sr.student_id = target_student.student_id
-GROUP BY e.id
+LEFT JOIN event_attendance ea
+    ON ea.id = e.id
+    AND ea.student_id = ?
+
+LEFT JOIN student_request sr
+    ON sr.id = e.id
+    AND sr.student_id = ?
+
 ORDER BY e.start_date_time DESC`,
     [student_id]
   );
@@ -563,6 +523,7 @@ module.exports = {
   updateMorningTriviaMissed,
   updateAfternoonTriviaMissed
 };
+
 
 
 
