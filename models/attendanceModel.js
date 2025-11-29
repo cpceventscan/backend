@@ -88,24 +88,69 @@ function getBystudEvent(event_id, student_id) {
 
 function getByStudent(student_id) {
   return db.execute(
-    `SELECT
+//     `SELECT
+//     e.id AS event_id,
+//     e.event_name AS eventName,
+//     DATE_FORMAT(e.start_date_time, '%b %d, %Y') AS date,
+//     ea.attendance_id,
+//     ea.time_in AS timeIn,
+//     ea.time_out AS timeOut,
+//     ea.remarks,
+    
+//     CASE
+//         WHEN sr.status = 1 THEN 'cleared'
+//         WHEN ea.status = 1 THEN 'cleared'
+//         WHEN ea.status = 0 THEN 'unsettled'
+//         ELSE 'absent'
+//     END AS status,
+
+//     sr.request_id,
+//     sr.absence_requests_id,
+//     CASE sr.status
+//         WHEN 1 THEN 'approved'
+//         WHEN 2 THEN 'rejected'
+//         WHEN 0 THEN 'pending'
+//         ELSE 'no request'
+//     END AS requestStatus
+
+// FROM events e
+// LEFT JOIN event_attendance ea
+//     ON ea.id = e.id
+//     AND ea.student_id = ?
+
+// LEFT JOIN student_request sr
+//     ON sr.id = e.id
+//     AND sr.student_id = ?
+
+// -- 🔥 Only show events that have attendance OR absence request
+// WHERE ea.attendance_id IS NOT NULL
+//    OR sr.request_id IS NOT NULL
+
+// ORDER BY e.start_date_time DESC`,
+
+     `SELECT
     e.id AS event_id,
     e.event_name AS eventName,
     DATE_FORMAT(e.start_date_time, '%b %d, %Y') AS date,
+
     ea.attendance_id,
     ea.time_in AS timeIn,
     ea.time_out AS timeOut,
     ea.remarks,
-    
+
+    -- FINAL STATUS LOGIC (Revised: Prioritize ea.status over time_in presence)
     CASE
-        WHEN sr.status = 1 THEN 'cleared'
-        WHEN ea.status = 1 THEN 'cleared'
-        WHEN ea.status = 0 THEN 'unsettled'
-        ELSE 'absent'
+        WHEN sr.status = 1 THEN 'Settled'                   -- approved absence
+        WHEN ea.status = 1 THEN 'Settled'                   -- settled in attendance table (prioritized)
+        WHEN ea.status = 0 THEN 'Unsettled'                 -- unsettled in attendance table
+        WHEN ea.time_in IS NOT NULL THEN 'Unsettled'        -- they attended but status not set → unsettled
+        ELSE 'Absent'
     END AS status,
 
     sr.request_id,
     sr.absence_requests_id,
+
+    -- Absence request status
     CASE sr.status
         WHEN 1 THEN 'approved'
         WHEN 2 THEN 'rejected'
@@ -114,6 +159,7 @@ function getByStudent(student_id) {
     END AS requestStatus
 
 FROM events e
+
 LEFT JOIN event_attendance ea
     ON ea.id = e.id
     AND ea.student_id = ?
@@ -122,11 +168,11 @@ LEFT JOIN student_request sr
     ON sr.id = e.id
     AND sr.student_id = ?
 
--- 🔥 Only show events that have attendance OR absence request
+-- Only show events with attendance or request
 WHERE ea.attendance_id IS NOT NULL
    OR sr.request_id IS NOT NULL
 
-ORDER BY e.start_date_time DESC`,
+ORDER BY e.start_date_time DESC;;`,
     [student_id,student_id]
   );
 }
@@ -524,6 +570,7 @@ module.exports = {
   updateMorningTriviaMissed,
   updateAfternoonTriviaMissed
 };
+
 
 
 
